@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chazapp – Flor de Loto</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --center-bg: #e8f5e2;
+    --center-text: #0f1117;
+    --accent: #7ec8a0;
+    --line: rgba(126,200,160,0.18);
+    --text-light: #e8f5e2;
+    --text-muted: rgba(232,245,226,0.5);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 32px 16px 48px;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    color: var(--accent);
+    font-size: clamp(1.1rem, 2vw, 1.4rem);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.25s;
+  }
+
+  .hint {
+    color: rgba(126,200,160,0.6);
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.4s;
+  }
+
+  #canvas {
+    position: relative;
+    width: min(840px, 96vw);
+    height: min(840px, 96vw);
+  }
+
+  #canvas svg {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .node {
+    position: absolute;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: transform 0.28s cubic-bezier(0.34,1.4,0.64,1),
+                box-shadow 0.28s ease,
+                border-color 0.28s ease;
+  }
+
+  .node-center {
+    width: 15%;
+    aspect-ratio: 1;
+    background: var(--center-bg);
+    cursor: default;
+    box-shadow: 0 0 0 6px rgba(126,200,160,0.12), 0 0 40px rgba(126,200,160,0.1);
+    z-index: 20;
+    opacity: 0;
+    animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards 0.55s;
+  }
+  .node-center .label {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(0.6rem, 1.7vw, 0.9rem);
+    color: var(--center-text);
+    line-height: 1.2;
+  }
+  .node-center .tag {
+    font-size: clamp(0.34rem, 0.85vw, 0.46rem);
+    color: rgba(15,17,23,0.5);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  .node-epic {
+    width: 16%;
+    aspect-ratio: 1;
+    border: 1.5px solid rgba(126,200,160,0.22);
+    padding: 7px;
+    z-index: 10;
+    opacity: 0;
+    animation: popIn 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards var(--delay, 0.8s);
+  }
+  .node-epic:hover, .node-epic.active {
+    transform: translate(-50%,-50%) scale(1.09);
+    box-shadow: 0 0 28px rgba(126,200,160,0.3);
+    border-color: rgba(126,200,160,0.7);
+    z-index: 15;
+  }
+  .node-epic .icon { font-size: clamp(0.85rem, 2vw, 1.25rem); margin-bottom: 3px; line-height: 1; }
+  .node-epic .label {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(0.48rem, 1.2vw, 0.68rem);
+    color: var(--text-light);
+    line-height: 1.25;
+  }
+
+  .node-sub {
+    width: 12%;
+    aspect-ratio: 1;
+    border: 1px solid rgba(126,200,160,0.15);
+    padding: 5px;
+    z-index: 8;
+    opacity: 0;
+    pointer-events: none;
+    transition: box-shadow 0.28s ease, border-color 0.28s ease, opacity 0.22s ease;
+  }
+  .node-sub.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .node-sub:hover {
+    transform: translate(-50%,-50%) scale(1.12) !important;
+    box-shadow: 0 0 16px rgba(126,200,160,0.22);
+    border-color: rgba(126,200,160,0.5);
+    z-index: 18;
+  }
+  .node-sub .label {
+    font-size: clamp(0.34rem, 0.9vw, 0.5rem);
+    color: var(--text-light);
+    line-height: 1.3;
+  }
+
+  .line-epic { stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  .line-sub  { stroke: rgba(126,200,160,0.1); stroke-width: 1; stroke-dasharray: 3 5; opacity: 0; transition: opacity 0.25s ease; }
+  .line-sub.visible { opacity: 1; }
+
+  #back-btn {
+    display: none;
+    margin-top: 24px;
+    background: transparent;
+    border: 1px solid rgba(126,200,160,0.3);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 8px 22px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  #back-btn:hover { background: rgba(126,200,160,0.08); border-color: rgba(126,200,160,0.6); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: translate(-50%,-50%) scale(0.45); }
+    to   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<h1>Chazapp</h1>
+<p class="subtitle">Flor de loto</p>
+<p class="hint">↗ Haga clic en un pétalo para más información</p>
+
+<div id="canvas">
+  <svg id="svgLines" viewBox="0 0 840 840" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+<button id="back-btn">← Back to overview</button>
+
+<script>
+const EPICS = [
+  { id:'sales',       label:'Ventas',       icon:'💳', color:'#1a3528', angle:90,
+    stories:['Creación de venta','Modificación de venta','Anulación de venta','VConsulta de venta','Selección de método de pago'] },
+  { id:'inventory',   label:'Inventario',   icon:'📦', color:'#172d3a', angle:162,
+    stories:['Reporte cantidad producto','Alerta cantidad producto','Ingreso de producto','Alerta fecha de vencimiento','Aliminación producto del sistema'] },
+  { id:'suppliers',   label:'Proveedores',   icon:'🚚', color:'#261838', angle:234,
+    stories:['Seguimiento a proveedores','Crear proveedor','Consulta proveedor','Modifica Proveedor','Elimina proveedor'] },
+  { id:'performance', label:'Rendimiento', icon:'📊', color:'#38261a', angle:306,
+    stories:['Consulta "horas pico"','Reporte comportamiento producto','Reporte ventas por hora','Consulta ventas anuales','Consulta historial vendedor'] },
+  { id:'employees',   label:'Vendedores',   icon:'👥', color:'#253818', angle:18,
+    stories:['Crea vendedor','Modifica vendedor','Consulta vendedor','Elimina vendedor','Gestión tiempos vendedores'] },
+];
+
+const S = 840, CX = 420, CY = 420;
+const EPIC_DIST  = 0.295 * S;
+const SUB_DIST   = 0.19  * S;
+
+const canvas  = document.getElementById('canvas');
+const svgEl   = document.getElementById('svgLines');
+const backBtn = document.getElementById('back-btn');
+let activeId  = null;
+
+function toXY(cx, cy, dist, angleDeg) {
+  const r = (angleDeg - 90) * Math.PI / 180;
+  return [cx + dist * Math.cos(r), cy + dist * Math.sin(r)];
+}
+
+function pct(v) { return (v / S * 100) + '%'; }
+
+function makeEl(cls, x, y, bg, innerHTML) {
+  const el = document.createElement('div');
+  el.className = 'node ' + cls;
+  el.style.left = pct(x);
+  el.style.top  = pct(y);
+  if (bg) el.style.background = bg;
+  el.innerHTML = innerHTML;
+  return el;
+}
+
+function addLine(x1, y1, x2, y2, cls, id) {
+  const l = document.createElementNS('http://www.w3.org/2000/svg','line');
+  l.setAttribute('x1',x1); l.setAttribute('y1',y1);
+  l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+  l.setAttribute('class', cls);
+  if (id) l.id = id;
+  svgEl.appendChild(l);
+  return l;
+}
+
+function spreadAngles(base, n, arc=68) {
+  if (n === 1) return [base];
+  return Array.from({length:n}, (_,i) => base + (i-(n-1)/2) * arc/(n-1));
+}
+
+// Center
+const cNode = makeEl('node-center', CX, CY, null,
+  `<span class="label">Chazapp</span><span class="tag">Aplicación Web</span>`);
+canvas.appendChild(cNode);
+
+// Epics + subs
+EPICS.forEach((epic, ei) => {
+  const [ex, ey] = toXY(CX, CY, EPIC_DIST, epic.angle);
+
+  addLine(CX, CY, ex, ey, 'line-epic');
+
+  const eNode = makeEl('node-epic', ex, ey, epic.color,
+    `<div class="icon">${epic.icon}</div><div class="label">${epic.label}</div>`);
+  eNode.style.setProperty('--delay', (0.75 + ei * 0.15) + 's');
+  eNode.dataset.id = epic.id;
+  eNode.addEventListener('click', () => toggleEpic(epic, ex, ey));
+  canvas.appendChild(eNode);
+
+  const angles = spreadAngles(epic.angle, epic.stories.length);
+  epic.stories.forEach((story, si) => {
+    const [sx, sy] = toXY(ex, ey, SUB_DIST, angles[si]);
+    addLine(ex, ey, sx, sy, 'line-sub', `ls-${epic.id}-${si}`);
+
+    const sNode = makeEl('node-sub', sx, sy, epic.color,
+      `<div class="label">${story}</div>`);
+    sNode.dataset.epic = epic.id;
+    sNode.dataset.idx  = si;
+    canvas.appendChild(sNode);
+  });
+});
+
+function toggleEpic(epic, ex, ey) {
+  if (activeId === epic.id) { closeAll(); return; }
+  closeAll(false);
+  activeId = epic.id;
+
+  document.querySelectorAll('.node-epic').forEach(n =>
+    n.classList.toggle('active', n.dataset.id === epic.id));
+
+  document.querySelectorAll(`.node-sub[data-epic="${epic.id}"]`).forEach((n, i) => {
+    setTimeout(() => n.classList.add('visible'), i * 60);
+  });
+  document.querySelectorAll(`[id^="ls-${epic.id}-"]`).forEach(l => l.classList.add('visible'));
+
+  backBtn.style.display = 'inline-block';
+}
+
+function closeAll(reset=true) {
+  document.querySelectorAll('.node-sub').forEach(n => n.classList.remove('visible'));
+  document.querySelectorAll('.line-sub').forEach(l => l.classList.remove('visible'));
+  document.querySelectorAll('.node-epic').forEach(n => n.classList.remove('active'));
+  if (reset) { activeId = null; backBtn.style.display = 'none'; }
+}
+
+backBtn.addEventListener('click', closeAll);
+</script>
+</body>
+</html>
